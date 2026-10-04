@@ -1,0 +1,8 @@
+tensorflow
+flask
+numpy
+pillow
+matplotlib
+joblib
+pandas
+scikit-learn==1.7.2

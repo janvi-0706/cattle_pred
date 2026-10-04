@@ -1,0 +1,16 @@
+# Python
+Backend/venv/
+Backend/__pycache__/
+Backend/*.py[cod]
+
+# Local model artifact exceeds GitHub's regular file-size limit
+Backend/milk_yield_prediction_model.pkl
+
+# Frontend dependencies and build output
+Frontend/node_modules/
+Frontend/dist/
+
+# Local tooling and OS files
+.DS_Store
+.vscode/*
+!.vscode/extensions.json

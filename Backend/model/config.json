@@ -1,0 +1,10 @@
+{
+    "image_size": [
+        224,
+        224
+    ],
+    "num_classes": 18,
+    "confidence_threshold": 0.7,
+    "model_name": "EfficientNetB0",
+    "seed": 42
+}
