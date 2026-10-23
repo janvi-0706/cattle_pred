@@ -1,133 +1,181 @@
-# 🐄 PashuPehchan — AI Cattle & Buffalo Breed Identifier
+# PashuPehchan
 
-> **IPD Project 2025–26**  
-> AI-Based Image Recognition System for Accurate Breed Identification of Cattle and Buffaloes in India.
+PashuPehchan is an AI-assisted cattle and buffalo breed identification and
+milk-yield analysis application for Indian livestock. The project contains a
+React/Vite frontend and a FastAPI backend that loads the trained breed
+classifier and milk-yield regression model.
 
----
+## Features
 
-## 📌 Problem Statement
+- Upload or drag-and-drop a JPG, JPEG, PNG, or WEBP image.
+- Reject non-cattle images using MobileNetV2 ImageNet out-of-distribution
+  validation.
+- Classify the uploaded animal with the EfficientNetB0 breed classifier
+  (currently configured with 18 cattle classes).
+- Display confidence, prediction status, top-five predictions, and a Grad-CAM
+  visualization returned by the backend.
+- Run milk-yield prediction from animal, nutrition, environment, and
+  lactation parameters.
+- Download breed and milk-analysis summaries as PNG files.
+- Browse local information for 12 Indian cattle and buffalo breeds in the UI.
+- Responsive layout with keyboard focus states and mobile navigation.
 
-Develop an AI-driven system that identifies cattle and buffalo breeds using images, providing breed-specific milk production and quality estimates to support farmers, veterinarians, and researchers across India.
+## Supported breeds
 
----
+| Cattle | Buffalo |
+| --- | --- |
+| Gir | Murrah |
+| Sahiwal | Nili-Ravi |
+| Tharparkar | Jaffarabadi |
+| Red Sindhi | Surti |
+| Kankrej | Bhadawari |
+| Hariana | Pandharpuri |
 
-## 🚀 Features
+## Project structure
 
-- **Image-Based Breed Detection** — Upload a JPG/PNG photo of an animal; the AI model identifies the breed with a confidence score.
-- **12 Breed Classes** — Covers major indigenous cattle and buffalo breeds of India (Gir, Sahiwal, Murrah, Nili-Ravi, and more).
-- **Milk Production & Quality Analysis** — Auto-fetched from detected breed or manually entered via a parameter form.
-- **Downloadable Summaries** — Export breed detection results and milk analysis reports as PNG images.
-- **Professional UI** — Green & white color scheme, collapsible sidebar navigation, fully responsive layout.
-
----
-
-## 🗂️ Project Structure
-
+```text
+IPD!/
+├── Backend/
+│   ├── app1.py
+│   ├── requirements.txt
+│   ├── milk_yield_prediction_model.pkl
+│   └── model/
+│       ├── indian_cattle_breed_classifier.keras
+│       ├── class_names.json
+│       └── config.json
+└── Frontend/
+    ├── index.html
+    ├── package.json
+    ├── vite.config.js
+    └── src/
+        ├── App.jsx
+        ├── index.css
+        ├── components/
+        ├── data/breedData.js
+        └── utils/downloadUtils.js
 ```
-src/
-├── components/
-│   ├── Sidebar.jsx          # Fixed side navigation
-│   ├── Header.jsx           # Hero section
-│   ├── AboutSection.jsx     # About, objectives, how-it-works, breed showcase
-│   ├── DetectionSection.jsx # Input 1 (image upload) + Input 2 (manual form) + milk output
-│   └── Footer.jsx           # Footer with project info
-├── data/
-│   └── breedData.js         # Breed database (12 breeds, mock detection pool)
-├── utils/
-│   └── downloadUtils.js     # Canvas-based PNG summary download functions
-├── App.jsx                  # Root layout + IntersectionObserver for active nav
-├── main.jsx
-└── index.css                # Tailwind CSS v4 import + global styles
-```
 
----
+## Requirements
 
-## 🛠️ Tech Stack
+- Python 3.10 or newer
+- Node.js 18 or newer
+- npm 9 or newer
 
-| Layer      | Technology                              |
-|------------|-----------------------------------------|
-| Frontend   | React 19, Vite 8, TailwindCSS v4        |
-| Icons      | Lucide React                            |
-| Export     | HTML5 Canvas API (PNG download)         |
-| Backend    | Python — Flask / FastAPI *(teammate)*   |
-| ML Model   | CNN / YOLOv8 *(teammate)*               |
-| Database   | MongoDB *(planned)*                     |
+The backend loads TensorFlow and the model files during startup. Keep the
+provided files under `Backend/model/` and
+`Backend/milk_yield_prediction_model.pkl`; otherwise the API will not start or
+the milk-analysis endpoint will be unavailable.
 
----
+## Run locally
 
-## ⚙️ Getting Started
+Open two terminals from the repository root.
 
-### Prerequisites
-- Node.js ≥ 18
-- npm ≥ 9
-
-### Install & Run
+### 1. Start the backend
 
 ```bash
-# Clone the repo
-git clone https://github.com/Manthan-2812/IPD.git
-cd IPD
+cd Backend
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app1:app --reload --host 127.0.0.1 --port 8000
+```
 
-# Install dependencies
+The API is available at `http://127.0.0.1:8000`. Interactive API
+documentation is available at
+`http://127.0.0.1:8000/docs`.
+
+### 2. Start the frontend
+
+```bash
+cd Frontend
 npm install
-
-# Start dev server
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+Open the Vite URL shown in the terminal, normally
+`http://localhost:5173`.
 
-### Build for Production
+The frontend currently calls the backend directly at
+`http://127.0.0.1:8000`. Start the backend on that address and port, or update
+the two fetch URLs in
+[`src/components/DetectionSection.jsx`](./src/components/DetectionSection.jsx)
+when using a different deployment.
+
+## Backend API
+
+### `GET /health`
+
+Returns a basic health response and the number of loaded breed classes.
+
+### `POST /predict`
+
+Accepts a multipart form upload with the field name `file`. Supported MIME
+types are `image/jpeg`, `image/jpg`, `image/png`, and `image/webp`.
+
+Successful responses include:
+
+```json
+{
+  "success": true,
+  "breed": "Gir",
+  "confidence": 0.92,
+  "confidence_percent": 92.0,
+  "status": "Confident Prediction",
+  "top5": [],
+  "gradcam": "data:image/jpeg;base64,...",
+  "model": "EfficientNetB0",
+  "num_classes": 18
+}
+```
+
+For an image that is not identified as cattle, the endpoint returns
+`success: false`, `is_cattle: false`, and a user-facing message.
+
+### `POST /api/milk-analysis`
+
+Accepts JSON containing the 19 fields used by the trained model:
+`Breed`, `Age_Months`, `Weight_kg`, `Parity`, `Lactation_Stage`,
+`Days_in_Milk`, `Feed_Type`, `Feed_Quantity_kg`, `Water_Intake_L`,
+`Grazing_Duration_hrs`, `Rumination_Time_hrs`, `Resting_Hours`,
+`Ambient_Temperature_C`, `Humidity_percent`, `Season`, `Housing_Score`,
+`Previous_Week_Avg_Yield`, `Body_Condition_Score`, and
+`Milking_Interval_hrs`.
+
+The response contains the model output in litres per day:
+
+```json
+{
+  "success": true,
+  "milk_yield_l": 8.42
+}
+```
+
+Invalid values are reported as HTTP 422 responses. If the milk model cannot be
+loaded, the endpoint reports HTTP 503 instead of returning a fabricated
+result.
+
+## Frontend commands
+
+Run these commands from `Frontend/`:
 
 ```bash
-npm run build
+npm run dev       # development server
+npm run build     # production build
+npm run preview   # preview the production build
+npm run lint      # Oxlint checks
 ```
 
----
+## Data and model notes
 
-## 🐄 Supported Breeds
+- Breed descriptions and displayed breed metrics are maintained in
+  `src/data/breedData.js`.
+- Breed image inference uses the EfficientNetB0 model and class metadata in
+  `Backend/model/`.
+- Milk prediction uses `Backend/milk_yield_prediction_model.pkl` with the
+  schema validated in `Backend/app1.py`.
+- Downloaded summaries are generated client-side with the HTML5 Canvas API.
 
-| Animal  | Breeds                                              |
-|---------|-----------------------------------------------------|
-| Cattle  | Gir, Sahiwal, Tharparkar, Red Sindhi, Kankrej, Hariana |
-| Buffalo | Murrah, Nili-Ravi, Jaffarabadi, Surti, Bhadawari, Pandharpuri |
+## Academic project
 
----
-
-## 🔗 Backend Integration
-
-The backend (model inference) is developed separately by a teammate.  
-To connect, replace the mock detection logic in `DetectionSection.jsx` with an API call:
-
-```js
-// Replace mock setTimeout with:
-const response = await fetch('/api/detect', {
-  method: 'POST',
-  body: formData,   // FormData with the uploaded image
-})
-const result = await response.json()
-// result: { breed, confidence, type, ... }
-```
-
----
-
-## 📊 Datasets Used
-
-- [Cattle Breeds Image Dataset — Roboflow Universe](https://universe.roboflow.com/)
-- [State-wise Milk Production Data — data.gov.in](https://data.gov.in/)
-- [Breed Classifications — ICAR-NBAGR](https://nbagr.icar.gov.in/)
-
----
-
-## 👨‍💻 Team
-
-| Role              | Responsibility                       |
-|-------------------|--------------------------------------|
-| Frontend (You)    | React UI, breed showcase, milk analysis form, download feature |
-| Backend (Teammate)| Model training (YOLOv8/CNN), Flask API, dataset preparation |
-
----
-
-## 📄 License
-
-This project is developed for academic purposes as part of an Industry Project (IPD) — 2025–26.
+This application was developed as an Industry Project (IPD), 2025–26, for
+academic and demonstration use.
